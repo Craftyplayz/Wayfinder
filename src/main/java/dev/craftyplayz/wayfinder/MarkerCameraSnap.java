@@ -11,16 +11,15 @@ public final class MarkerCameraSnap {
     private long started;
     private boolean armed = true;
 
-    public Marker update(boolean active, String dimension, List<Marker> markers, double maxDistance,
-                         double x, double y, double z, double lookX, double lookY, double lookZ,
+    public Marker update(boolean active, List<Marker> markers,
+                         double lookX, double lookY, double lookZ,
                          long now) {
         if (!active) {
             reset();
             return null;
         }
         if (target != null) {
-            if (now - started < HOLD_NANOS && markers.contains(target)
-                    && eligible(target, dimension, maxDistance, x, y, z)) {
+            if (now - started < HOLD_NANOS && markers.contains(target) && target.enabled()) {
                 return target;
             }
             target = null;
@@ -32,12 +31,13 @@ public final class MarkerCameraSnap {
         double bestCosine = SNAP_COSINE;
         boolean nearMarker = false;
         for (Marker marker : markers) {
-            if (!eligible(marker, dimension, maxDistance, x, y, z)) continue;
-            double dx = marker.x() - x, dy = marker.y() - y, dz = marker.z() - z;
-            double distance = Math.hypot(Math.hypot(dx, dy), dz);
-            double cosine = (dx / distance) * (lookX / lookLength)
-                    + (dy / distance) * (lookY / lookLength)
-                    + (dz / distance) * (lookZ / lookLength);
+            if (!marker.enabled()) continue;
+            double pitch = Math.toRadians(marker.pitch());
+            double yaw = Math.toRadians(marker.yaw());
+            double horizontal = Math.abs(marker.pitch()) == 90 ? 0 : Math.cos(pitch);
+            double cosine = -Math.sin(yaw) * horizontal * (lookX / lookLength)
+                    - Math.sin(pitch) * (lookY / lookLength)
+                    + Math.cos(yaw) * horizontal * (lookZ / lookLength);
             if (cosine >= REARM_COSINE) nearMarker = true;
             if (cosine >= bestCosine) {
                 closest = marker;
@@ -61,10 +61,4 @@ public final class MarkerCameraSnap {
         armed = true;
     }
 
-    private static boolean eligible(Marker marker, String dimension, double maxDistance,
-                                    double x, double y, double z) {
-        double distance = Math.hypot(Math.hypot(marker.x() - x, marker.y() - y), marker.z() - z);
-        return marker.enabled() && marker.dimension().equals(dimension)
-                && distance > 1.0e-6 && distance <= maxDistance;
-    }
 }

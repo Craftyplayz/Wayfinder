@@ -1,6 +1,6 @@
 # Wayfinder
 
-A client-only **Minecraft Java 26.1.2 / Fabric** mod for directional world markers.
+A client-only **Minecraft Java 26.1.2 / Fabric** mod for fixed pitch/yaw direction markers.
 Hold **H** to see markers while continuing to look around, move, and play normally.
 Release H to hide them. The HUD does not open a screen or capture the mouse.
 While holding H, looking within 5° of a marker snaps the camera to it and holds
@@ -35,25 +35,29 @@ Press M to open marker management. Select a marker, then **Edit**, **Remove**, o
 **Enable/Disable** it. Removal requires confirmation. Use the page buttons for
 long lists. Buttons and text fields support normal mouse and Tab/Enter navigation.
 
-**Add Marker** opens an editor for name, X, Y, Z, dimension, and enabled state.
-**Use Current Position** fills coordinates and dimension from the player; edit
+**Add Marker** opens an editor for name, pitch, yaw, and enabled state.
+**Current View** fills the angles from the player's current look direction; edit
 them before saving if desired. **Cancel** or Escape leaves the original unchanged.
-Invalid names, non-finite or out-of-range coordinates, and malformed dimension
-identifiers are rejected with an error instead of crashing.
+Invalid names, non-finite angles, and out-of-range pitch are rejected with an error.
 
-Coordinates are absolute world coordinates in blocks: +X east, +Y up, +Z south.
-Decimal coordinates are supported. Dimensions use identifiers such as
-`minecraft:overworld`, `minecraft:the_nether`, and `minecraft:the_end`; modded
-dimension identifiers are also accepted. Only markers in the current dimension
-appear. Coordinates are not converted between the Nether and Overworld.
+Angles use Minecraft's degrees, with decimals supported:
+- **Pitch:** -90° looks straight up, 0° is level, +90° looks straight down.
+- **Yaw:** 0° faces south, 90° west, ±180° north, and -90° east.
+  Any finite yaw is accepted and wrapped into [-180°, 180°).
+
+Markers point to absolute look directions, **not positions or offsets from your
+current view**. Walking or changing dimensions does not change the target direction.
+Turn until the marker's dot meets the center of your view to match the saved direction.
+While holding H, the camera snaps to nearby target directions as described above.
 
 ## HUD
 
-Markers are projected from the actual camera position and orientation using the
+Markers are projected as fixed direction vectors using the actual camera orientation and
 world projection's dynamic field of view and screen aspect ratio. This includes
 vertical direction, yaw wrapping, and third-person cameras—not just compass yaw.
-Visible targets have a small cyan dot, a readable backed label, and rounded
-distance in blocks (`m`). Targets outside the view have directional edge arrows.
+Visible targets have a small cyan dot and a readable backed label.
+Targets outside the view have directional edge arrows. There are no block distances
+or distance limits because markers have no world position.
 An exactly rearward target chooses a rightward turn; either horizontal turn
 would reach it.
 
@@ -65,8 +69,8 @@ to the navigation overlay.
 ## Configuration and persistence
 
 Data is saved in **`config/wayfinder.json`**, relative to the Minecraft instance.
-Markers are local to the client and shared across worlds/servers: dimension IDs
-are stored, but world/server identities are not. Disable irrelevant markers when
+Markers are local to the client and shared across worlds, servers, and dimensions.
+Disable irrelevant markers when
 changing worlds. No example markers are installed automatically.
 
 Close Minecraft before manually editing the JSON. The file is loaded once at
@@ -75,6 +79,11 @@ file and atomic replacement where supported. Failed saves leave the previous
 in-memory list intact and display an error. Missing files mean an empty list.
 Malformed files are not silently overwritten: marker management provides
 explicit backup/recovery, preserving the original before saving recovered data.
+Old X/Y/Z coordinate markers cannot be converted without a reference position.
+They are reported as legacy entries and left untouched on disk until you explicitly
+choose **Recover/Back Up**. Recovery backs up the original and keeps only valid angle
+markers; recreate old targets with the desired pitch/yaw. Old distance settings
+are ignored, while label and offscreen settings are retained.
 
 Example:
 
@@ -82,25 +91,20 @@ Example:
 {
   "markers": [
     {
-      "name": "Village",
-      "x": 1250,
-      "y": 72,
-      "z": -430,
-      "enabled": true,
-      "dimension": "minecraft:overworld"
+      "name": "Look southwest",
+      "pitch": -15,
+      "yaw": 45,
+      "enabled": true
     }
   ],
   "settings": {
-    "showDistance": true,
     "showLabels": true,
-    "showOffscreen": true,
-    "maxDistance": 60000000
+    "showOffscreen": true
   }
 }
 ```
 
-HUD settings are optional and edited in JSON. `maxDistance` is a positive, finite
-number of blocks, at most 60,000,000. Marker scale is fixed to keep the initial
+HUD settings are optional and edited in JSON. Marker scale is fixed to keep the
 HUD simple; Minecraft's GUI Scale controls its displayed size.
 
 ## Build and tests
@@ -135,12 +139,12 @@ The implementation environment cannot resolve Fabric Maven or Minecraft's
 download hosts. The Gradle wrapper itself ran, but the full mod build was blocked
 at Loom dependency resolution. **Client compilation, a usable JAR, and in-game
 behaviour have not been verified in this environment.** The standalone core
-test runner passed **1,484 checks** on Java 25 using Gson 2.13.2, independently
+test runner passed **1,774 checks** on Java 25 using Gson 2.13.2, independently
 of Minecraft.
 
 Before release, run the build and this checklist in a real 26.1.2 client:
 
-- Add targets ahead, behind, left, right, above, below, diagonally, and far away.
+- Add pitch/yaw targets ahead, behind, left, right, above, below, and diagonally.
 - Hold H while walking and looking through 360°, including up/down, screen
   edges, and the ±180° yaw boundary; release H and confirm immediate hiding.
 - Test several coincident markers, different FOVs/GUI scales, and third-person view.
@@ -148,8 +152,8 @@ Before release, run the build and this checklist in a real 26.1.2 client:
   continued movement, free looking afterward, and rearming after looking away.
   Check targets above/below, both third-person views, and cancellation by releasing
   H, opening a menu, switching dimensions, hiding the HUD, and losing focus.
-- Use current position, edit/cancel, toggle enabled state, and confirm/cancel deletion.
-- Switch dimensions and confirm that only matching markers appear.
+- Use Current View, edit/cancel, toggle enabled state, and confirm/cancel deletion.
+- Walk long distances and switch dimensions; confirm the target direction stays fixed.
 - Restart Minecraft and confirm persistence.
 - Rebind both keys in Controls and check held versus pressed behaviour.
 - Repeat in singleplayer and on an unmodified multiplayer server.

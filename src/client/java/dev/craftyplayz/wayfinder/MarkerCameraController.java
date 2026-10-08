@@ -5,7 +5,6 @@ import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 public final class MarkerCameraController {
@@ -20,7 +19,7 @@ public final class MarkerCameraController {
         manager = markerManager;
     }
 
-    public static boolean update(Camera camera, Vec3 eyePosition) {
+    public static boolean update(Camera camera) {
         Minecraft client = Minecraft.getInstance();
         CameraType cameraType = client.options.getCameraType();
         if (lastLevel != client.level || lastCameraType != cameraType) SNAP.reset();
@@ -34,29 +33,13 @@ public final class MarkerCameraController {
             SNAP.reset();
             return false;
         }
-        Vec3 position = camera.position();
         Vector3f forward = new Vector3f(0, 0, -1).rotate(camera.rotation());
-        Marker marker = SNAP.update(true, client.level.dimension().identifier().toString(),
-                manager.markers(), manager.settings().maxDistance(), position.x, position.y, position.z,
+        Marker marker = SNAP.update(true, manager.markers(),
                 forward.x(), forward.y(), forward.z(), System.nanoTime());
         if (marker == null) return false;
-        double dx = marker.x() - eyePosition.x;
-        double dy = marker.y() - eyePosition.y;
-        double dz = marker.z() - eyePosition.z;
-        if (cameraType.isMirrored()) {
-            dx = -dx;
-            dy = -dy;
-            dz = -dz;
-        }
-        double horizontal = Math.hypot(dx, dz);
-        if (Math.hypot(horizontal, dy) <= 1.0e-6) {
-            SNAP.reset();
-            return false;
-        }
-        float yaw = horizontal <= 1.0e-6 ? client.player.getYRot()
-                : (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float yaw = (float) marker.yaw() + (cameraType.isMirrored() ? 180 : 0);
         yaw = client.player.getYRot() + Mth.wrapDegrees(yaw - client.player.getYRot());
-        float pitch = (float) -Math.toDegrees(Math.atan2(dy, horizontal));
+        float pitch = (float) marker.pitch() * (cameraType.isMirrored() ? -1 : 1);
         client.player.setYRot(yaw);
         client.player.setXRot(pitch);
         client.player.yRotO = yaw;

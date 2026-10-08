@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
 public final class MarkerManagementScreen extends Screen {
+    private static final int ROW_HEIGHT = 36;
     private final Screen parent;
     private final MarkerManager manager;
     private int page;
@@ -35,7 +36,7 @@ public final class MarkerManagementScreen extends Screen {
         if (recoveryAvailable) {
             error = Component.translatable("wayfinder.markers.write_error", manager.lastError());
         }
-        rowsPerPage = Math.max(1, (height - 164) / 24);
+        rowsPerPage = Math.max(1, (height - 164) / ROW_HEIGHT);
         page = Math.min(page, Math.max(0, (markers.size() - 1) / rowsPerPage));
         if (selected >= markers.size()) {
             selected = markers.size() - 1;
@@ -57,12 +58,12 @@ public final class MarkerManagementScreen extends Screen {
             addRenderableWidget(Button.builder(label, button -> {
                 selected = index;
                 refresh();
-            }).bounds(left, 30 + row * 24, contentWidth(), 20)
+            }).bounds(left, 30 + row * ROW_HEIGHT, contentWidth(), 20)
                     .tooltip(Tooltip.create(Component.translatable("wayfinder.markers.tooltip",
                             marker.name(), marker.x(), marker.y(), marker.z(), marker.dimension(),
                             state(marker.enabled())))).build());
         }
-        int pagingY = 30 + rowsPerPage * 24;
+        int pagingY = 30 + rowsPerPage * ROW_HEIGHT;
         Button previous = button(Component.translatable("wayfinder.markers.previous"),
                 left, pagingY, 64, () -> changePage(-1));
         previous.active = page > 0;
@@ -185,7 +186,17 @@ public final class MarkerManagementScreen extends Screen {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
         graphics.centeredText(font, title, width / 2, 10, 0xFFFFFFFF);
         int left = (width - contentWidth()) / 2;
-        int pagingY = 30 + rowsPerPage * 24;
+        int first = page * rowsPerPage;
+        List<Marker> markers = manager.markers();
+        for (int row = 0; row < rowsPerPage && first + row < markers.size(); row++) {
+            Marker marker = markers.get(first + row);
+            int rowY = 30 + row * ROW_HEIGHT;
+            graphics.enableScissor(left, rowY + 20, left + contentWidth(), rowY + ROW_HEIGHT);
+            graphics.text(font, Component.translatable("wayfinder.markers.coordinates",
+                    marker.x(), marker.y(), marker.z()), left + 4, rowY + 23, 0xFFCCCCCC);
+            graphics.disableScissor();
+        }
+        int pagingY = 30 + rowsPerPage * ROW_HEIGHT;
         graphics.centeredText(font, Component.translatable("wayfinder.markers.page", page + 1,
                 Math.max(1, (manager.markers().size() + rowsPerPage - 1) / rowsPerPage)),
                 width / 2, pagingY + 6, 0xFFFFFFFF);

@@ -60,7 +60,7 @@ public final class MarkerManagementScreen extends Screen {
                 refresh();
             }).bounds(left, 30 + row * ROW_HEIGHT, contentWidth(), 20)
                     .tooltip(Tooltip.create(Component.translatable("wayfinder.markers.tooltip",
-                            marker.name(), marker.x(), marker.y(), marker.z(), marker.dimension(),
+                            marker.name(), marker.pitch(), marker.yaw(),
                             state(marker.enabled())))).build());
         }
         int pagingY = 30 + rowsPerPage * ROW_HEIGHT;
@@ -192,8 +192,8 @@ public final class MarkerManagementScreen extends Screen {
             Marker marker = markers.get(first + row);
             int rowY = 30 + row * ROW_HEIGHT;
             graphics.enableScissor(left, rowY + 20, left + contentWidth(), rowY + ROW_HEIGHT);
-            graphics.text(font, Component.translatable("wayfinder.markers.coordinates",
-                    marker.x(), marker.y(), marker.z()), left + 4, rowY + 23, 0xFFCCCCCC);
+            graphics.text(font, Component.translatable("wayfinder.markers.angles",
+                    marker.pitch(), marker.yaw()), left + 4, rowY + 23, 0xFFCCCCCC);
             graphics.disableScissor();
         }
         int pagingY = 30 + rowsPerPage * ROW_HEIGHT;
@@ -207,10 +207,8 @@ public final class MarkerManagementScreen extends Screen {
         graphics.enableScissor(left, pagingY + 24, left + contentWidth(), height - 58);
         if (validSelection()) {
             Marker marker = manager.markers().get(selected);
-            graphics.text(font, Component.translatable("wayfinder.markers.coordinates",
-                    marker.x(), marker.y(), marker.z()), left, pagingY + 26, 0xFFFFFFFF);
-            graphics.text(font, Component.translatable("wayfinder.markers.dimension",
-                    marker.dimension()), left, pagingY + 38, 0xFFCCCCCC);
+            graphics.text(font, Component.translatable("wayfinder.markers.angles",
+                    marker.pitch(), marker.yaw()), left, pagingY + 26, 0xFFFFFFFF);
         } else {
             graphics.text(font, Component.translatable("wayfinder.markers.select"),
                     left, pagingY + 26, 0xFFCCCCCC);

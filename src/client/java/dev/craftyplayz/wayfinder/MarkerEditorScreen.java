@@ -13,16 +13,12 @@ public final class MarkerEditorScreen extends Screen {
     private final MarkerManager manager;
     private final int index;
     private String name;
-    private String x;
-    private String y;
-    private String z;
-    private String dimension;
+    private String pitch;
+    private String yaw;
     private boolean enabled = true;
     private EditBox nameBox;
-    private EditBox xBox;
-    private EditBox yBox;
-    private EditBox zBox;
-    private EditBox dimensionBox;
+    private EditBox pitchBox;
+    private EditBox yawBox;
     private Component error = Component.empty();
 
     public MarkerEditorScreen(MarkerManagementScreen parent, MarkerManager manager, int index) {
@@ -33,10 +29,8 @@ public final class MarkerEditorScreen extends Screen {
         if (index >= 0) {
             Marker marker = manager.markers().get(index);
             name = marker.name();
-            x = Double.toString(marker.x());
-            y = Double.toString(marker.y());
-            z = Double.toString(marker.z());
-            dimension = marker.dimension();
+            pitch = Double.toString(marker.pitch());
+            yaw = Double.toString(marker.yaw());
             enabled = marker.enabled();
         }
     }
@@ -45,24 +39,18 @@ public final class MarkerEditorScreen extends Screen {
     protected void init() {
         if (name == null) {
             name = Component.translatable("wayfinder.marker.default_name").getString();
-            x = "0";
-            y = "0";
-            z = "0";
-            dimension = "minecraft:overworld";
-            readCurrentPosition();
+            pitch = "0";
+            yaw = "0";
+            readCurrentView();
         }
         int left = (width - contentWidth()) / 2;
-        int coordinateWidth = (contentWidth() - 8) / 3;
+        int angleWidth = (contentWidth() - 4) / 2;
         nameBox = field("wayfinder.editor.name", left, 44, contentWidth(), name);
         nameBox.setResponder(value -> name = value);
-        xBox = field("wayfinder.editor.x", left, 82, coordinateWidth, x);
-        xBox.setResponder(value -> x = value);
-        yBox = field("wayfinder.editor.y", left + coordinateWidth + 4, 82, coordinateWidth, y);
-        yBox.setResponder(value -> y = value);
-        zBox = field("wayfinder.editor.z", left + (coordinateWidth + 4) * 2, 82, coordinateWidth, z);
-        zBox.setResponder(value -> z = value);
-        dimensionBox = field("wayfinder.editor.dimension", left, 120, contentWidth(), dimension);
-        dimensionBox.setResponder(value -> dimension = value);
+        pitchBox = field("wayfinder.editor.pitch", left, 82, angleWidth, pitch);
+        pitchBox.setResponder(value -> pitch = value);
+        yawBox = field("wayfinder.editor.yaw", left + angleWidth + 4, 82, angleWidth, yaw);
+        yawBox.setResponder(value -> yaw = value);
 
         int halfWidth = (contentWidth() - 4) / 2;
         button(Component.translatable("wayfinder.editor.enabled", MarkerManagementScreen.state(enabled)),
@@ -71,13 +59,11 @@ public final class MarkerEditorScreen extends Screen {
                     button.setMessage(Component.translatable("wayfinder.editor.enabled",
                             MarkerManagementScreen.state(enabled)));
                 });
-        Button current = button(Component.translatable("wayfinder.editor.current_position"),
+        Button current = button(Component.translatable("wayfinder.editor.current_view"),
                 left + halfWidth + 4, 148, halfWidth, button -> {
-                    readCurrentPosition();
-                    xBox.setValue(x);
-                    yBox.setValue(y);
-                    zBox.setValue(z);
-                    dimensionBox.setValue(dimension);
+                    readCurrentView();
+                    pitchBox.setValue(pitch);
+                    yawBox.setValue(yaw);
                     error = Component.empty();
                 });
         current.active = minecraft.player != null && minecraft.level != null;
@@ -103,22 +89,20 @@ public final class MarkerEditorScreen extends Screen {
                 .bounds(left, top, buttonWidth, 20).build());
     }
 
-    private void readCurrentPosition() {
+    private void readCurrentView() {
         if (minecraft.player != null && minecraft.level != null) {
-            x = Double.toString(minecraft.player.getX());
-            y = Double.toString(minecraft.player.getY());
-            z = Double.toString(minecraft.player.getZ());
-            dimension = minecraft.level.dimension().identifier().toString();
+            Marker view = new Marker("View", minecraft.player.getXRot(), minecraft.player.getYRot(), true);
+            pitch = Double.toString(view.pitch());
+            yaw = Double.toString(view.yaw());
         }
     }
 
     private void save() {
         Marker marker;
         try {
-            marker = new Marker(name, Double.parseDouble(x.trim()), Double.parseDouble(y.trim()),
-                    Double.parseDouble(z.trim()), enabled, dimension);
+            marker = new Marker(name, Double.parseDouble(pitch.trim()), Double.parseDouble(yaw.trim()), enabled);
         } catch (NumberFormatException exception) {
-            error = Component.translatable("wayfinder.editor.invalid_coordinates");
+            error = Component.translatable("wayfinder.editor.invalid_angles");
             return;
         } catch (IllegalArgumentException exception) {
             error = Component.translatable("wayfinder.editor.invalid_marker", exception.getMessage());
@@ -138,14 +122,11 @@ public final class MarkerEditorScreen extends Screen {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
         graphics.centeredText(font, title, width / 2, 10, 0xFFFFFFFF);
         int left = (width - contentWidth()) / 2;
-        int coordinateWidth = (contentWidth() - 8) / 3;
+        int angleWidth = (contentWidth() - 4) / 2;
         graphics.text(font, Component.translatable("wayfinder.editor.name"), left, 32, 0xFFFFFFFF);
-        graphics.text(font, Component.translatable("wayfinder.editor.x"), left, 70, 0xFFFFFFFF);
-        graphics.text(font, Component.translatable("wayfinder.editor.y"),
-                left + coordinateWidth + 4, 70, 0xFFFFFFFF);
-        graphics.text(font, Component.translatable("wayfinder.editor.z"),
-                left + (coordinateWidth + 4) * 2, 70, 0xFFFFFFFF);
-        graphics.text(font, Component.translatable("wayfinder.editor.dimension"), left, 108, 0xFFFFFFFF);
+        graphics.text(font, Component.translatable("wayfinder.editor.pitch"), left, 70, 0xFFFFFFFF);
+        graphics.text(font, Component.translatable("wayfinder.editor.yaw"),
+                left + angleWidth + 4, 70, 0xFFFFFFFF);
         MarkerManagementScreen.extractError(graphics, font, error, left, 176, contentWidth(),
                 Math.max(1, (height - 34 - 176) / (font.lineHeight + 1)), mouseX, mouseY);
     }

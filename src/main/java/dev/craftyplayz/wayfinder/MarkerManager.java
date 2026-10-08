@@ -63,9 +63,11 @@ public final class MarkerManager {
             for (JsonElement entry : entries.getAsJsonArray()) {
                 try {
                     JsonObject object = entry.getAsJsonObject();
-                    loaded.add(new Marker(string(object, "name"), number(object, "x"),
-                            number(object, "y"), number(object, "z"), bool(object, "enabled"),
-                            string(object, "dimension")));
+                    if (object.has("x") || object.has("y") || object.has("z")) {
+                        throw new IllegalArgumentException("Coordinate markers cannot be converted to fixed view angles");
+                    }
+                    loaded.add(new Marker(string(object, "name"), number(object, "pitch"),
+                            number(object, "yaw"), bool(object, "enabled")));
                 } catch (RuntimeException ex) {
                     invalid++;
                     LOGGER.log(Level.WARNING, "Skipping invalid marker entry " + loaded.size(), ex);
@@ -75,8 +77,7 @@ public final class MarkerManager {
             if (root.has("settings")) {
                 try {
                     JsonObject object = root.getAsJsonObject("settings");
-                    loadedSettings = new HudSettings(bool(object, "showDistance"), bool(object, "showLabels"),
-                            bool(object, "showOffscreen"), number(object, "maxDistance"));
+                    loadedSettings = new HudSettings(bool(object, "showLabels"), bool(object, "showOffscreen"));
                 } catch (RuntimeException ex) {
                     invalid++;
                     LOGGER.log(Level.WARNING, "Invalid HUD settings; using defaults", ex);
@@ -86,7 +87,8 @@ public final class MarkerManager {
             settings = loadedSettings;
             needsRecovery = invalid > 0;
             if (needsRecovery) {
-                return fail("Skipped " + invalid + " invalid entries. Explicitly save to back up and recover the file.", null);
+                return fail("Skipped " + invalid + " invalid or legacy coordinate entries. Explicitly save to back up "
+                        + "and recover the file; recreate coordinate markers using pitch and yaw.", null);
             }
             lastError = null;
             return true;
@@ -126,7 +128,7 @@ public final class MarkerManager {
     public synchronized boolean toggle(int index) {
         if (!validIndex(index)) return false;
         Marker m = markers.get(index);
-        return update(index, new Marker(m.name(), m.x(), m.y(), m.z(), !m.enabled(), m.dimension()));
+        return update(index, new Marker(m.name(), m.pitch(), m.yaw(), !m.enabled()));
     }
 
     public synchronized boolean updateSettings(HudSettings value) {

@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 public final class MarkerHudRenderer {
     private static final int COLOR = 0xFF80E8FF;
     private final MarkerManager manager;
-    private double cameraX, cameraY, cameraZ;
     private float qx, qy, qz, qw;
     private double verticalFov;
     private String dimension;
@@ -28,9 +27,6 @@ public final class MarkerHudRenderer {
         if (!KeyBindings.SHOW.isDown() || client.screen != null || client.player == null) return;
         CameraRenderState camera = context.levelState().cameraRenderState;
         if (!camera.initialized) return;
-        cameraX = camera.pos.x;
-        cameraY = camera.pos.y;
-        cameraZ = camera.pos.z;
         qx = camera.orientation.x();
         qy = camera.orientation.y();
         qz = camera.orientation.z();
@@ -54,12 +50,8 @@ public final class MarkerHudRenderer {
         HudSettings settings = manager.settings();
         labels = 0;
         for (Marker marker : markers) {
-            if (!marker.enabled() || !dimension.equals(marker.dimension())) continue;
-            double dx = marker.x() - cameraX;
-            double dy = marker.y() - cameraY;
-            double dz = marker.z() - cameraZ;
-            if (Math.hypot(Math.hypot(dx, dy), dz) > settings.maxDistance()) continue;
-            MarkerProjection.Point point = MarkerProjection.project(dx, dy, dz, qx, qy, qz, qw,
+            if (!marker.enabled()) continue;
+            MarkerProjection.Point point = MarkerProjection.projectAngles(marker.pitch(), marker.yaw(), qx, qy, qz, qw,
                     verticalFov, width, height, 12);
             if (point.offscreen() && !settings.showOffscreen()) continue;
             int x = (int) Math.round(point.x());
@@ -72,10 +64,9 @@ public final class MarkerHudRenderer {
             }
             String name = settings.showLabels()
                     ? client.font.plainSubstrByWidth(marker.name(), Math.max(1, width - 24)) : "";
-            String distance = settings.showDistance() ? Math.round(point.distance()) + "m" : "";
-            if (name.isEmpty() && distance.isEmpty()) continue;
-            int boxWidth = Math.max(client.font.width(name), client.font.width(distance)) + 6;
-            int boxHeight = (!name.isEmpty() && !distance.isEmpty() ? 2 : 1) * (client.font.lineHeight + 1) + 4;
+            if (name.isEmpty()) continue;
+            int boxWidth = client.font.width(name) + 6;
+            int boxHeight = client.font.lineHeight + 5;
             if (!placeLabel(x, y, boxWidth, boxHeight, width, height)) continue;
             int index = labels - 1;
             int textY = top[index] + 2;
@@ -86,13 +77,7 @@ public final class MarkerHudRenderer {
                 graphics.fill(endX, Math.min(y, endY), endX + 1, Math.max(y, endY) + 1, 0x9980E8FF);
             }
             graphics.fill(left[index], top[index], right[index], bottom[index], 0xAA000000);
-            if (!name.isEmpty()) {
-                graphics.text(client.font, name, left[index] + 3, textY, 0xFFFFFFFF);
-                textY += client.font.lineHeight + 1;
-            }
-            if (!distance.isEmpty()) {
-                graphics.text(client.font, distance, left[index] + 3, textY, COLOR);
-            }
+            graphics.text(client.font, name, left[index] + 3, textY, 0xFFFFFFFF);
         }
     }
 

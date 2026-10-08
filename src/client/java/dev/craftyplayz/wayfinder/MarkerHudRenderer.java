@@ -80,8 +80,10 @@ public final class MarkerHudRenderer {
             int index = labels - 1;
             int textY = top[index] + 2;
             if (Math.abs(top[index] - y) > boxHeight || Math.abs(left[index] - x) > boxWidth) {
-                line(graphics, x, y, Math.clamp(x, left[index], right[index]),
-                        Math.clamp(y, top[index], bottom[index]), 0x9980E8FF);
+                int endX = Math.clamp(x, left[index], right[index]);
+                int endY = Math.clamp(y, top[index], bottom[index]);
+                graphics.fill(Math.min(x, endX), y, Math.max(x, endX) + 1, y + 1, 0x9980E8FF);
+                graphics.fill(endX, Math.min(y, endY), endX + 1, Math.max(y, endY) + 1, 0x9980E8FF);
             }
             graphics.fill(left[index], top[index], right[index], bottom[index], 0xAA000000);
             if (!name.isEmpty()) {

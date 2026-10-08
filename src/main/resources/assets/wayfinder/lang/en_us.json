@@ -1,4 +1,7 @@
 {
+  "key.wayfinder.show": "Show Directional Markers",
+  "key.wayfinder.manage": "Manage Directional Markers",
+  "key.category.wayfinder.markers": "Wayfinder",
   "wayfinder.markers.title": "Wayfinder Markers",
   "wayfinder.markers.add": "Add",
   "wayfinder.markers.edit": "Edit",

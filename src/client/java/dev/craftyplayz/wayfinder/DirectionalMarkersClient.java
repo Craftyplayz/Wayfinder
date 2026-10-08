@@ -14,6 +14,7 @@ public final class DirectionalMarkersClient implements ClientModInitializer {
         MarkerManager manager = new MarkerManager(
                 FabricLoader.getInstance().getConfigDir().resolve("wayfinder.json"));
         KeyBindings.initialize();
+        MarkerCameraController.initialize(manager);
         MarkerHudRenderer hud = new MarkerHudRenderer(manager);
         LevelRenderEvents.END_EXTRACTION.register(hud::captureCamera);
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,

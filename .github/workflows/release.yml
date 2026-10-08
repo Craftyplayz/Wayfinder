@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - name: Build
+        run: ./gradlew build
+
+      - name: Locate mod JAR
+        id: jar
+        run: |
+          version=$(./gradlew -q --no-configuration-cache properties --property version | sed -n 's/^version: //p')
+          if [ -z "$version" ]; then
+            echo "Could not determine project version from Gradle" >&2
+            exit 1
+          fi
+          jar="build/libs/wayfinder-${version}.jar"
+          if [ ! -f "$jar" ]; then
+            echo "Expected JAR not found: $jar" >&2
+            ls -l build/libs >&2
+            exit 1
+          fi
+          echo "Found $jar"
+          echo "path=$jar" >> "$GITHUB_OUTPUT"
+
+      - name: Attach JAR to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          JAR: ${{ steps.jar.outputs.path }}
+        run: gh release upload "$TAG" "$JAR" --clobber --repo "$GITHUB_REPOSITORY"

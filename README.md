@@ -117,6 +117,14 @@ Minecraft's download hosts.
 validation, persistence, and recovery; it is also part of `build`.
 `./gradlew runClient` starts a development client when dependencies are available.
 
+### CI and releases
+
+`.github/workflows/build.yml` runs `./gradlew build` on JDK 25 for every push and
+pull request and uploads the mod JAR as the `Wayfinder-build` artifact on the
+run's summary page. Publishing a GitHub Release triggers
+`.github/workflows/release.yml`, which rebuilds the tag and attaches
+`wayfinder-<version>.jar` (version from `mod_version`) to the release.
+
 ### Verification status and in-game checklist
 
 The implementation environment cannot resolve Fabric Maven or Minecraft's

@@ -19,6 +19,7 @@ public final class CoreTests {
         Logger.getLogger(MarkerManager.class.getName()).setLevel(Level.OFF);
         validation();
         projection();
+        cameraSnap();
         angleProjection();
         Files.createDirectories(Path.of("build"));
         Path directory = Files.createTempDirectory(Path.of("build"), "core-tests-");
@@ -67,6 +68,50 @@ public final class CoreTests {
 
     private static MarkerProjection.Point project(double x, double y, double z) {
         return MarkerProjection.project(x, y, z, 90, 200, 100, 10);
+    }
+
+    private static void cameraSnap() {
+        MarkerCameraSnap snap = new MarkerCameraSnap();
+        Marker ahead = new Marker("Ahead", 0, 0, true);
+        Marker near = new Marker("Near", 0, -3, true);
+        Marker outside = new Marker("Outside", 0, -6, true);
+        Marker disabled = new Marker("Disabled", 0, 0, false);
+        check(snap.update(false, List.of(ahead), 0, 0, 1, 0) == null, "Inactive HUD does not snap");
+        check(snap.update(true, List.of(outside, disabled),
+                0, 0, 1, 0) == null, "Only enabled markers within five degrees snap");
+        check(snap.update(true, List.of(near, ahead),
+                0, 0, 1, 0) == ahead, "Choose the closest angular target");
+        check(snap.update(true, List.of(near, ahead),
+                1, 0, 0, 999_999_999) == ahead, "Hold ignores mouse direction for one second");
+        check(snap.update(true, List.of(near, ahead),
+                0, 0, 1, 1_000_000_000) == null, "Hold ends at exactly one second");
+        check(snap.update(true, List.of(near, ahead),
+                0, 0, 1, 2_000_000_000) == null, "No immediate repeated lock");
+        check(snap.update(true, List.of(near, ahead),
+                1, 0, 0, 2_000_000_001) == null, "Looking away rearms");
+        check(snap.update(true, List.of(near),
+                0, 0, 1, 2_000_000_002) == near, "Approaching again snaps");
+        check(snap.update(true, List.of(),
+                0, 0, 1, 2_000_000_003) == null, "Removed target cancels");
+        snap.reset();
+        check(snap.update(true, List.of(ahead), 0, 0, 1, 0) == ahead, "Reset permits a fresh snap");
+        check(snap.update(true, List.of(disabled), 0, 0, 1, 1) == null, "Disabled target cancels");
+        snap.reset();
+        snap.update(true, List.of(ahead), 0, 0, 1, 0);
+        check(snap.update(false, List.of(ahead),
+                0, 0, 1, 1) == null, "Releasing HUD cancels immediately");
+        check(snap.update(true, List.of(ahead),
+                0, 0, 1, 2) == ahead, "New HUD activation rearms");
+        snap.reset();
+        Marker above = new Marker("Above", -90, 75, true);
+        check(snap.update(true, List.of(above),
+                0, 1, 0, 0) == above, "Vertical targets snap regardless of yaw");
+        snap.reset();
+        Marker behind = new Marker("Behind", 0, 180, true);
+        check(snap.update(true, List.of(behind),
+                0, 0, 1, 0) == null, "Rearward targets do not snap");
+        check(snap.update(true, List.of(behind),
+                0, 0, -1, 0) == behind, "Yaw wrapping does not prevent snapping");
     }
 
     private static void projection() {

@@ -3,6 +3,10 @@
 A client-only **Minecraft Java 26.1.2 / Fabric** mod for fixed pitch/yaw direction markers.
 Hold **H** to see markers while continuing to look around, move, and play normally.
 Release H to hide them. The HUD does not open a screen or capture the mouse.
+While holding H, looking within 5° of a marker snaps the camera to it and holds
+it there for one second. Movement still works. After the hold, look at least
+10° away from nearby markers before snapping again, or release and hold H again.
+Releasing H, opening a menu, hiding the HUD, or losing focus cancels the hold.
 
 ## Installation
 
@@ -44,7 +48,7 @@ Angles use Minecraft's degrees, with decimals supported:
 Markers point to absolute look directions, **not positions or offsets from your
 current view**. Walking or changing dimensions does not change the target direction.
 Turn until the marker's dot meets the center of your view to match the saved direction.
-Wayfinder does not rotate your view automatically.
+While holding H, the camera snaps to nearby target directions as described above.
 
 ## HUD
 
@@ -144,6 +148,10 @@ Before release, run the build and this checklist in a real 26.1.2 client:
 - Hold H while walking and looking through 360°, including up/down, screen
   edges, and the ±180° yaw boundary; release H and confirm immediate hiding.
 - Test several coincident markers, different FOVs/GUI scales, and third-person view.
+- Approach a marker with the crosshair while holding H; confirm a one-second snap,
+  continued movement, free looking afterward, and rearming after looking away.
+  Check targets above/below, both third-person views, and cancellation by releasing
+  H, opening a menu, switching dimensions, hiding the HUD, and losing focus.
 - Use Current View, edit/cancel, toggle enabled state, and confirm/cancel deletion.
 - Walk long distances and switch dimensions; confirm the target direction stays fixed.
 - Restart Minecraft and confirm persistence.

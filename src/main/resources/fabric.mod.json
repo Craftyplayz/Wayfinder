@@ -9,6 +9,12 @@
   "entrypoints": {
     "client": ["dev.craftyplayz.wayfinder.DirectionalMarkersClient"]
   },
+  "mixins": [
+    {
+      "config": "wayfinder.client.mixins.json",
+      "environment": "client"
+    }
+  ],
   "depends": {
     "fabricloader": ">=0.19.3",
     "minecraft": "=26.1.2",

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "wayfinder",
+  "version": "${version}",
+  "name": "Wayfinder",
+  "description": "Hold a key to see camera-relative world markers without interrupting gameplay.",
+  "authors": ["Craftyplayz"],
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.craftyplayz.wayfinder.DirectionalMarkersClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "=26.1.2",
+    "java": ">=25",
+    "fabric-api": ">=0.155.3"
+  }
+}

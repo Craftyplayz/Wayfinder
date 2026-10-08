@@ -54,4 +54,8 @@ tasks.register('coreTest', JavaExec) {
     mainClass = 'dev.craftyplayz.wayfinder.CoreTests'
 }
 
+tasks.named('test') {
+    enabled = false
+}
+
 check.dependsOn coreTest

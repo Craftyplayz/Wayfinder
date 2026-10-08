@@ -19,6 +19,7 @@ public final class CoreTests {
         Logger.getLogger(MarkerManager.class.getName()).setLevel(Level.OFF);
         validation();
         projection();
+        angleProjection();
         Files.createDirectories(Path.of("build"));
         Path directory = Files.createTempDirectory(Path.of("build"), "core-tests-");
         try {
@@ -34,7 +35,7 @@ public final class CoreTests {
     }
 
     private static Marker marker(String name) {
-        return new Marker(name, 1.25, -64, 30_000_000, true, "minecraft:overworld");
+        return new Marker(name, 1.25, -64, true);
     }
 
     private static void validation() {
@@ -44,25 +45,24 @@ public final class CoreTests {
             rejects(() -> marker(name));
         }
         rejects(() -> marker(null));
-        for (double value : new double[]{Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY,
-                30_000_001, -30_000_001}) {
-            rejects(() -> new Marker("X", value, 0, 0, true, "minecraft:overworld"));
-            rejects(() -> new Marker("X", 0, value, 0, true, "minecraft:overworld"));
-            rejects(() -> new Marker("X", 0, 0, value, true, "minecraft:overworld"));
+        for (double value : new double[]{Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
+            rejects(() -> new Marker("X", value, 0, true));
+            rejects(() -> new Marker("X", 0, value, true));
         }
-        new Marker("Boundary", -30_000_000, 30_000_000, -30_000_000, false, "my-mod:folder/dim_2");
-        for (String dimension : List.of("", "overworld", ":overworld", "minecraft:", "Minecraft:overworld",
-                "minecraft:Upper", "minecraft:has space", " minecraft:overworld", "a:b:c", "a:\nb")) {
-            rejects(() -> new Marker("X", 0, 0, 0, true, dimension));
+        for (double pitch : new double[]{-90.001, 90.001, Double.MAX_VALUE}) {
+            rejects(() -> new Marker("X", pitch, 0, true));
         }
-        rejects(() -> new Marker("X", 0, 0, 0, true, null));
-        check(HudSettings.DEFAULTS.showDistance() && HudSettings.DEFAULTS.showLabels()
+        new Marker("Up", -90, 0, true);
+        new Marker("Down", 90, 0, false);
+        for (double yaw : new double[]{-720, -181, -180, 0, 180, 181, 720, Double.MAX_VALUE}) {
+            Marker m = new Marker("Wrap", 0, yaw, true);
+            check(m.yaw() >= -180 && m.yaw() < 180, "Yaw normalized");
+        }
+        near(new Marker("Wrap", 0, 181, true).yaw(), -179);
+        near(new Marker("Wrap", 0, -181, true).yaw(), 179);
+        check(HudSettings.DEFAULTS.showLabels()
                 && HudSettings.DEFAULTS.showOffscreen(), "Visible defaults");
-        check(HudSettings.DEFAULTS.maxDistance() >= 1_250, "Example village visible by default");
-        for (double distance : new double[]{0, -1, Double.NaN, Double.POSITIVE_INFINITY, 60_000_001}) {
-            rejects(() -> new HudSettings(true, true, true, distance));
-        }
-        new HudSettings(false, false, false, 60_000_000);
+        new HudSettings(false, false);
     }
 
     private static MarkerProjection.Point project(double x, double y, double z) {
@@ -182,6 +182,55 @@ public final class CoreTests {
         rejects(() -> project(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE));
     }
 
+    private static MarkerProjection.Point angles(double pitch, double yaw) {
+        return MarkerProjection.projectAngles(pitch, yaw, 0, 0, 0, 1, 90, 200, 100, 10);
+    }
+
+    private static void angleProjection() {
+        var north = angles(0, 180);
+        near(north.x(), 100);
+        near(north.y(), 50);
+        check(!north.offscreen(), "Yaw 180 faces north with the north-facing camera");
+        check(angles(0, 0).offscreen(), "Yaw 0 faces south behind the north-facing camera");
+        near(angles(0, -90).x(), 190);
+        near(angles(0, 90).x(), 10);
+        near(angles(-90, 0).y(), 10);
+        near(angles(90, 0).y(), 90);
+        check(angles(-30, 180).y() < 50 && angles(30, 180).y() > 50, "Minecraft pitch sign");
+        near(angles(0, 179).x(), 100 - 50 * Math.tan(Math.toRadians(1)));
+        near(angles(0, -179).x(), 100 + 50 * Math.tan(Math.toRadians(1)));
+        near(angles(0, 540).x(), north.x());
+        near(angles(-90, 123).x(), angles(-90, 0).x());
+
+        for (double yaw : new double[]{-720, -181, -180, -179, -90, 0, 90, 179, 180, 181, 720}) {
+            for (double pitch : new double[]{-90, -45, 0, 45, 90}) {
+                double a = Math.toRadians(180 - yaw) / 2;
+                double b = Math.toRadians(-pitch) / 2;
+                double qx = Math.cos(a) * Math.sin(b);
+                double qy = Math.sin(a) * Math.cos(b);
+                double qz = -Math.sin(a) * Math.sin(b);
+                double qw = Math.cos(a) * Math.cos(b);
+                var aligned = MarkerProjection.projectAngles(pitch, yaw, qx, qy, qz, qw,
+                        90, 200, 100, 10);
+                check(!aligned.offscreen(), "Matching pitch/yaw centers target");
+                near(aligned.x(), 100);
+                near(aligned.y(), 50);
+                // Equivalent direction at any distance: walking cannot change a saved angle.
+                double p = Math.toRadians(pitch);
+                double y = Math.toRadians(yaw);
+                var distant = MarkerProjection.project(-Math.sin(y) * Math.cos(p) * 1000,
+                        -Math.sin(p) * 1000, Math.cos(y) * Math.cos(p) * 1000,
+                        qx, qy, qz, qw, 90, 200, 100, 10);
+                near(aligned.x(), distant.x());
+                near(aligned.y(), distant.y());
+            }
+        }
+        rejects(() -> angles(Double.NaN, 0));
+        rejects(() -> angles(91, 0));
+        rejects(() -> angles(-91, 0));
+        rejects(() -> angles(0, Double.POSITIVE_INFINITY));
+    }
+
     private static void persistence(Path directory) throws IOException {
         Path file = directory.resolve("nested/markers.json");
         MarkerManager manager = new MarkerManager(file);
@@ -191,16 +240,19 @@ public final class CoreTests {
         List<Marker> snapshot = manager.markers();
         rejects(() -> snapshot.add(marker("Forbidden")));
         Marker original = snapshot.getFirst();
-        Marker canceledEdit = new Marker("Canceled", 2, 3, 4, false, original.dimension());
+        Marker canceledEdit = new Marker("Canceled", 2, 3, false);
         check(manager.markers().getFirst().equals(original) && !canceledEdit.equals(original), "Canceled edit immutable");
         check(manager.add(marker("Second")), "Second add");
         check(snapshot.size() == 1, "Snapshots do not change");
         check(manager.toggle(0) && !manager.markers().getFirst().enabled(), "Toggle");
         check(manager.update(1, marker("Edited")), "Update");
         check(manager.remove(0), "Remove");
-        HudSettings settings = new HudSettings(false, true, false, 123.5);
+        HudSettings settings = new HudSettings(true, false);
         check(manager.updateSettings(settings), "Settings save");
         check(Files.readString(file).contains("\n  \"markers\""), "Pretty JSON");
+        check(Files.readString(file).contains("\"pitch\"") && Files.readString(file).contains("\"yaw\"")
+                && !Files.readString(file).contains("\"dimension\"") && !Files.readString(file).contains("\"x\""),
+                "Only fixed angles are persisted");
         JsonParser.parseString(Files.readString(file));
         MarkerManager reloaded = new MarkerManager(file);
         check(reloaded.markers().equals(manager.markers()), "Round trip markers");
@@ -225,7 +277,7 @@ public final class CoreTests {
             check(recovered.size() == 1 && Files.readString(recovered.getFirst()).equals("{broken"), "Corrupt backup");
         }
         String validEntry = """
-                {"name":"Valid","x":0,"y":0,"z":0,"enabled":true,"dimension":"minecraft:overworld"}
+                {"name":"Valid","pitch":0,"yaw":0,"enabled":true}
                 """;
         String partial = "{\"markers\":[" + validEntry + ",{\"name\":\"Invalid\"}]}";
         Files.writeString(file, partial);
@@ -237,13 +289,42 @@ public final class CoreTests {
         for (String bad : List.of("", "null", "[]", "{}", "{\"markers\":{}}", "{\"markers\":[]} trailing",
                 "{\"markers\":[ " + validEntry.replace("\"enabled\":true", "\"enabled\":\"true\"") + "]}",
                 "{\"markers\":[],\"settings\":{\"showDistance\":true}}",
-                "{\"markers\":[" + validEntry.replace("\"x\":0", "\"x\":1e1000") + "]}",
-                "{\"markers\":[" + validEntry.replace("\"y\":0", "\"y\":\"0\"") + "]}")) {
+                "{\"markers\":[" + validEntry.replace("\"pitch\":0", "\"pitch\":1e1000") + "]}",
+                "{\"markers\":[" + validEntry.replace("\"pitch\":0", "\"pitch\":91") + "]}",
+                "{\"markers\":[" + validEntry.replace("\"yaw\":0", "\"yaw\":\"0\"") + "]}")) {
             Files.writeString(file, bad);
             MarkerManager invalid = new MarkerManager(file);
             check(invalid.lastError() != null, "Invalid JSON or schema diagnosed");
             check(!invalid.add(marker("No")) && Files.readString(file).equals(bad), "Bad data never silently replaced");
         }
+
+        String legacyEntry = """
+                {"name":"Old","x":10,"y":20,"z":30,"enabled":true,"dimension":"minecraft:overworld"}
+                """;
+        String legacy = "{\"markers\":[" + validEntry + "," + legacyEntry
+                + "],\"settings\":{\"showLabels\":false,\"showOffscreen\":true,"
+                + "\"showDistance\":true,\"maxDistance\":60000000}}";
+        Files.writeString(file, legacy);
+        MarkerManager legacyManager = new MarkerManager(file);
+        check(legacyManager.markers().size() == 1 && legacyManager.lastError() != null,
+                "Legacy coordinates are not silently interpreted as angles");
+        check(!legacyManager.add(marker("New")) && Files.readString(file).equals(legacy),
+                "Legacy config preserved until explicit recovery");
+        check(legacyManager.settings().equals(new HudSettings(false, true)), "Legacy HUD settings retained");
+        check(legacyManager.save(), "Legacy recovery succeeds");
+        try (var backups = Files.list(file.getParent())) {
+            check(backups.filter(path -> path.getFileName().toString().contains(".corrupt-"))
+                    .anyMatch(path -> {
+                        try {
+                            return Files.readString(path).equals(legacy);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }), "Legacy coordinates backed up before recovery");
+        }
+        check(new MarkerManager(file).markers().equals(legacyManager.markers()), "Recovered angles reload");
+        check(legacyManager.add(new Marker("Wrapped", -90, 541, true)), "Wrapped yaw saves");
+        near(new MarkerManager(file).markers().getLast().yaw(), -179);
 
         Path blocker = directory.resolve("blocked");
         MarkerManager blocked = new MarkerManager(blocker.resolve("markers.json"));

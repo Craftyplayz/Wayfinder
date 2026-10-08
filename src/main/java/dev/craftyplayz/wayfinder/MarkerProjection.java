@@ -6,6 +6,20 @@ public final class MarkerProjection {
     /** Angle is in radians, clockwise from screen-right. */
     public record Point(double x, double y, boolean offscreen, double angle, double distance) {}
 
+    /** Minecraft angles in degrees: yaw 0 faces +Z, positive pitch looks down. */
+    public static Point projectAngles(double pitch, double yaw,
+                                      double qx, double qy, double qz, double qw,
+                                      double verticalFovDeg, double width, double height, double margin) {
+        if (!Double.isFinite(pitch) || pitch < -90 || pitch > 90 || !Double.isFinite(yaw)) {
+            throw new IllegalArgumentException("Invalid pitch or yaw");
+        }
+        double p = Math.toRadians(pitch);
+        double y = Math.toRadians(yaw % 360);
+        double horizontal = Math.abs(pitch) == 90 ? 0 : Math.cos(p);
+        return project(-Math.sin(y) * horizontal, -Math.sin(p), Math.cos(y) * horizontal,
+                qx, qy, qz, qw, verticalFovDeg, width, height, margin);
+    }
+
     public static Point project(double dx, double dy, double dz,
                                 double qx, double qy, double qz, double qw,
                                 double verticalFovDeg, double width, double height, double margin) {

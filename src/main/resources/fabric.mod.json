@@ -3,7 +3,7 @@
   "id": "wayfinder",
   "version": "${version}",
   "name": "Wayfinder",
-  "description": "Hold a key to see camera-relative world markers without interrupting gameplay.",
+  "description": "Hold a key to see fixed pitch/yaw direction markers without interrupting gameplay.",
   "authors": ["Craftyplayz"],
   "environment": "client",
   "entrypoints": {

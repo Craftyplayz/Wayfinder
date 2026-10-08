@@ -6,8 +6,8 @@ Release H to hide them. The HUD does not open a screen or capture the mouse.
 
 ## Installation
 
-1. Install **Java 25** and Fabric Loader **0.19.5 or newer** for Minecraft **26.1.2**.
-2. Install Fabric API **0.155.3+26.1.2**.
+1. Install **Java 25** and Fabric Loader **0.19.3 or newer** for Minecraft **26.1.2**.
+2. Install Fabric API **0.154.0+26.1.2 or newer** for Minecraft **26.1.2**.
 3. Put `wayfinder-1.0.0.jar` from `build/libs` into your instance's `mods` folder.
    Do not install the `-sources.jar`.
 4. Launch Minecraft and enter a world.
